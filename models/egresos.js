@@ -1,0 +1,63 @@
+import { MongoClient, ServerApiVersion, ObjectId } from "mongodb";
+
+const URI = 'mongodb://localhost:27017'
+
+const client = new MongoClient(URI, {
+    serverApi:{
+        version: ServerApiVersion.v1,
+        strict:true,
+        deprecationErrors:true
+    }
+})
+
+async function connect() {
+    try {
+      await client.connect();
+      const db = client.db('PresupuestoDB');
+      return db.collection('egreso');
+    } catch (error) {
+      console.error('Error de Conexión', error);
+    }
+  }
+
+export class EgresosModel {
+    static async getAll(){
+        const db = await connect()
+        return db.find({}).toArray()
+    }
+
+    static async getById({ id }){
+        const db = await connect()
+        return db.findOne( {_id:ObjectId.createFromHexString(id)} )
+    }
+
+    static async create( { input }){
+        const db = await connect()
+        if (input.fecha) {
+            input.fecha = new Date(input.fecha); // Convierte el string a un objeto Date
+        }
+        const { insertedId } = await db.insertOne(input)
+        return {
+            ...input
+        }
+    }
+    static async update( { id, input} ){
+        const db = await connect()
+        if (input.fecha) {
+            input.fecha = new Date(input.fecha); // Convierte el string a un objeto Date
+        }
+        const updateEntity = await db.findOneAndUpdate(
+            { _id: ObjectId.createFromHexString(id)},
+            { $set: input},
+            { returnDocument: 'after'}
+        )
+        if (!updateEntity) return false
+        return updateEntity
+    }
+
+    static async delete({ id }) {
+        const db = await connect();
+        const {deletedCount} = await db.deleteOne({ _id: ObjectId.createFromHexString(id) });
+        return deletedCount;
+      }
+}
